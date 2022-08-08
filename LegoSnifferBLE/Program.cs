@@ -25,8 +25,14 @@ namespace LegoBraindamage
         private static string con_str = "Host=10.10.242.82;Username=postgres;Password=secret;Database=postgres";
         private static string payload = string.Empty;
         public static string p_value = string.Empty;
+        private static string mac_addres = "a8:e2:c1:9c:71:4a"; //Default
         static void Main(string[] args)
         {
+            Console.Title = "Lego Sniffer BLE";
+            if(args.Length > 0)
+            {
+                mac_addres = args[0];
+            }
             NpgsqlConnection connection = InitDB(con_str);
             string sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES ("+payload+")";
             EnumerateSnapshot();
@@ -41,6 +47,7 @@ namespace LegoBraindamage
                     cmd.ExecuteScalar();
                 }
                 Console.WriteLine("{" + DateTime.Now + ", " + payloadval + "}");
+                //Console.ForegroundColor = ConsoleColor.Red;
                 System.Threading.Thread.Sleep(100);
             }
         }
@@ -53,9 +60,13 @@ namespace LegoBraindamage
         static async void EnumerateSnapshot()
         {
             collection = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
-            EP = new BluetoothEndPoint(BluetoothAddress.Parse("a8:e2:c1:9c:71:4a"), BluetoothService.BluetoothBase);
+            EP = new BluetoothEndPoint(BluetoothAddress.Parse(mac_addres), BluetoothService.BluetoothBase);
             BC = new BluetoothClient();
-            BTDevice = new BluetoothDeviceInfo(BluetoothAddress.Parse(collection[0].Id.Substring(collection[0].Id.Length - 17, 17)));
+            //Get trough collection
+            //BTDevice = new BluetoothDeviceInfo(BluetoothAddress.Parse(collection[0].Id.Substring(collection[0].Id.Length - 17, 17)));
+
+            //Get with MAC ADDRESS
+            BTDevice = new BluetoothDeviceInfo(BluetoothAddress.Parse(mac_addres));
             BC.BeginConnect(BTDevice.DeviceAddress, BluetoothService.SerialPort, new AsyncCallback(Connect), EP);
         }
         private static void Connect(IAsyncResult result)
