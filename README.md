@@ -8,7 +8,7 @@ Simple C# Solution to sniff incoming BLE packets from Robot Inventor 51515
 - Paired BLE connection to the 51515 HUB
 
 ## Installation
-- Pull the solution
-- Adjust the DB connecton string in Program.cs
-- Adjust the MAC address to your paired 51515 Hub in Program.cs line 56
-- Profit?
+1. Pull the solution
+2. Adjust the DB connecton string in Program.cs
+3. Adjust the MAC address to your paired 51515 Hub in Program.cs line 56
+4. Profit?
