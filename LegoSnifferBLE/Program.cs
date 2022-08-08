@@ -1,0 +1,95 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Windows;
+using Windows.Devices.Bluetooth;
+using Windows.Devices.Enumeration;
+using InTheHand.Net.Bluetooth;
+using InTheHand.Net.Sockets;
+using InTheHand.Net;
+using System.Net.Sockets;
+using Npgsql;
+
+namespace LegoBraindamage
+{
+    public class Program
+    {
+        public static DeviceInformationCollection collection;
+        private static BluetoothDeviceInfo BTDevice;
+        private static BluetoothEndPoint EP;
+        private static BluetoothClient BC;
+        private static NetworkStream stream = null;
+        private static string con_str = "Host=10.10.242.82;Username=postgres;Password=secret;Database=postgres";
+        private static string payload = string.Empty;
+        public static string p_value = string.Empty;
+        static void Main(string[] args)
+        {
+            NpgsqlConnection connection = InitDB(con_str);
+            string sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES ("+payload+")";
+            EnumerateSnapshot();
+            int payloadval = 0;
+            while (true)
+            {
+                if (payload.Length > 0 && int.TryParse(payload, out payloadval))
+                {
+                    p_value = payload;
+                    sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + payload + ")";
+                    var cmd = new NpgsqlCommand(sql_q, connection);
+                    cmd.ExecuteScalar();
+                }
+                Console.WriteLine("{" + DateTime.Now + ", " + payloadval + "}");
+                System.Threading.Thread.Sleep(100);
+            }
+        }
+        static NpgsqlConnection InitDB(string _con_str)
+        {
+            NpgsqlConnection con = new NpgsqlConnection(_con_str);
+            con.Open();
+            return con;
+        }
+        static async void EnumerateSnapshot()
+        {
+            collection = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
+            EP = new BluetoothEndPoint(BluetoothAddress.Parse("a8:e2:c1:9c:71:4a"), BluetoothService.BluetoothBase);
+            BC = new BluetoothClient();
+            BTDevice = new BluetoothDeviceInfo(BluetoothAddress.Parse(collection[0].Id.Substring(collection[0].Id.Length - 17, 17)));
+            BC.BeginConnect(BTDevice.DeviceAddress, BluetoothService.SerialPort, new AsyncCallback(Connect), EP);
+        }
+        private static void Connect(IAsyncResult result)
+        {
+            stream = BC.GetStream();
+            if (result.IsCompleted)
+            {               
+                while (stream.CanRead)
+                {
+                    byte[] myReadBuffer = new byte[1024];
+                    byte[] myWriteBuffer = new byte[1024];
+                    string mystr = "";
+                    do
+                    {
+                        stream.Read(myReadBuffer, 0, myReadBuffer.Length);
+                        mystr += Encoding.Default.GetString(Decode(myReadBuffer));
+                        if (mystr.StartsWith("val:"))
+                        {
+                            payload = mystr.Replace("val:", "");
+                        }
+                    } while (stream.DataAvailable);
+                }
+            }
+        }
+        public static byte[] Decode(byte[] packet)
+        {
+            var i = packet.Length - 1;
+            while (packet[i] == 0)
+            {
+                --i;
+            }
+            var temp = new byte[i + 1];
+            Array.Copy(packet, temp, i + 1);
+            return temp;
+        }
+    }
+}

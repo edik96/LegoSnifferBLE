@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32421.90
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegoSnifferBLE", "LegoSnifferBLE\LegoSnifferBLE.csproj", "{4F513A37-3227-4FE9-A9D1-1D8B07C13542}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VisualizerLegoSnifferBLE", "VisualizerLegoSnifferBLE\VisualizerLegoSnifferBLE.csproj", "{677460D5-F68E-4E39-963F-DBD319F5C648}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4F513A37-3227-4FE9-A9D1-1D8B07C13542} = {4F513A37-3227-4FE9-A9D1-1D8B07C13542}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4F513A37-3227-4FE9-A9D1-1D8B07C13542}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F513A37-3227-4FE9-A9D1-1D8B07C13542}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F513A37-3227-4FE9-A9D1-1D8B07C13542}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F513A37-3227-4FE9-A9D1-1D8B07C13542}.Release|Any CPU.Build.0 = Release|Any CPU
+		{677460D5-F68E-4E39-963F-DBD319F5C648}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{677460D5-F68E-4E39-963F-DBD319F5C648}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{677460D5-F68E-4E39-963F-DBD319F5C648}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{677460D5-F68E-4E39-963F-DBD319F5C648}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {652A4B36-6F72-4B6B-A625-2D2B6C003EDE}
+	EndGlobalSection
+EndGlobal
