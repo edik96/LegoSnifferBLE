@@ -1,18 +1,23 @@
-﻿<Window x:Class="VisualizerBrainDamage.MainWindow"
+﻿<Window x:Class="VisualizerLegoSnifferBLE.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
-        xmlns:local="clr-namespace:VisualizerBrainDamage"
+        xmlns:local="clr-namespace:VisualizerLegoSnifferBLE"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="VisualizerLegoSnifferBLE" Height="450" Width="800">
     <Grid>
-        <lvc:CartesianChart Grid.Row="2" Margin="0, 0, 0, 0" Series="{Binding LastHourSeries}" Hoverable="False" DataTooltip="{x:Null}">
+        <lvc:CartesianChart>
+            <lvc:CartesianChart.Series>
+                <lvc:LineSeries Values="{Binding Values, UpdateSourceTrigger=PropertyChanged}" Fill="#19031CFF" Stroke="#FF0034FF" Foreground="#FF000FFF" LineSmoothness="101" />
+            </lvc:CartesianChart.Series>
             <lvc:CartesianChart.AxisX>
-                <!--a small visual improvement, lets hide the first points (x = 0, x=1) to get better animations-->
-                <lvc:Axis MinValue="0"></lvc:Axis>
+                <lvc:Axis LabelFormatter="{Binding Formatter}"></lvc:Axis>
             </lvc:CartesianChart.AxisX>
         </lvc:CartesianChart>
+        <Label Content="{Binding Cm, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" VerticalAlignment="Top">
+                
+        </Label>
     </Grid>
 </Window>

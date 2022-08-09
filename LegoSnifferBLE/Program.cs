@@ -12,8 +12,13 @@ using InTheHand.Net.Sockets;
 using InTheHand.Net;
 using System.Net.Sockets;
 using Npgsql;
+using LiveCharts.Defaults;
+using LiveCharts;
+using LiveCharts.Configurations;
+using System.IO.Pipes;
+using System.IO;
 
-namespace LegoBraindamage
+namespace LegoSnifferBLE
 {
     public class Program
     {
@@ -25,30 +30,48 @@ namespace LegoBraindamage
         private static string con_str = "Host=10.10.242.82;Username=postgres;Password=secret;Database=postgres";
         private static string payload = string.Empty;
         public static string p_value = string.Empty;
-        private static string mac_addres = "a8:e2:c1:9c:71:4a"; //Default
+        public static string mac_addres = "a8:e2:c1:9c:71:4a"; //Default
+        private static StreamWriter writer;
+        private static int usePipes = 0;
         static void Main(string[] args)
         {
             Console.Title = "Lego Sniffer BLE";
-            if(args.Length > 0)
+            if (args.Length > 0)
             {
                 mac_addres = args[0];
+                if(args.Length > 1)
+                   usePipes = Convert.ToInt32(args[1]);
             }
+            var server = new NamedPipeServerStream(mac_addres);
+            
+            if(usePipes == 1)
+            {
+                server.WaitForConnection();
+                writer = new StreamWriter(server);
+            }
+          
+
             NpgsqlConnection connection = InitDB(con_str);
             string sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES ("+payload+")";
+
             EnumerateSnapshot();
             int payloadval = 0;
             while (true)
             {
                 if (payload.Length > 0 && int.TryParse(payload, out payloadval))
                 {
-                    p_value = payload;
+                    Console.WriteLine("{" + DateTime.Now + ", " + payloadval + "}");
+                    if (usePipes == 1)
+                    {
+                        writer.WriteLine(payloadval);
+                        writer.Flush();
+                    }
                     sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + payload + ")";
                     var cmd = new NpgsqlCommand(sql_q, connection);
                     cmd.ExecuteScalar();
                 }
-                Console.WriteLine("{" + DateTime.Now + ", " + payloadval + "}");
-                //Console.ForegroundColor = ConsoleColor.Red;
-                System.Threading.Thread.Sleep(100);
+              
+                System.Threading.Thread.Sleep(500);
             }
         }
         static NpgsqlConnection InitDB(string _con_str)
@@ -91,6 +114,7 @@ namespace LegoBraindamage
                 }
             }
         }
+        
         public static byte[] Decode(byte[] packet)
         {
             var i = packet.Length - 1;
