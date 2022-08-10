@@ -28,7 +28,7 @@ namespace LegoSnifferBLE
         private static BluetoothClient BC;
         private static NetworkStream stream = null;
         private static string con_str = "Host=10.10.242.82;Username=postgres;Password=secret;Database=postgres";
-        private static string payload = string.Empty;
+        private static string[] payload = new string[2];
         public static string p_value = string.Empty;
         public static string mac_addres = "a8:e2:c1:9c:71:4a"; //Default
         private static StreamWriter writer;
@@ -52,21 +52,24 @@ namespace LegoSnifferBLE
           
 
             NpgsqlConnection connection = InitDB(con_str);
-            string sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES ("+payload+")";
-
+            //string sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES ("+payload+")";
+            string sql_q = string.Empty;
             EnumerateSnapshot();
-            int payloadval = 0;
+            int distance = 0;
             while (true)
             {
-                if (payload.Length > 0 && int.TryParse(payload, out payloadval))
+                if (payload.Length > 0)
                 {
-                    Console.WriteLine("{" + DateTime.Now + ", " + payloadval + "}");
+                    int.TryParse(payload[0], out distance);
+                    if (payload[1] == "None" || payload[1] == string.Empty)
+                        payload[1] = "white";
+                    Console.WriteLine("{" + DateTime.Now + ", " + distance + ", " + payload[1] + "}");
                     if (usePipes == 1)
                     {
-                        writer.WriteLine(payloadval);
+                        writer.WriteLine(distance + ";" + payload[1]);
                         writer.Flush();
                     }
-                    sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + payload + ")";
+                    sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + distance + ")";
                     var cmd = new NpgsqlCommand(sql_q, connection);
                     cmd.ExecuteScalar();
                 }
@@ -97,7 +100,7 @@ namespace LegoSnifferBLE
             stream = BC.GetStream();
             if (result.IsCompleted)
             {               
-                while (stream.CanRead)
+                while (stream != null && stream.CanRead)
                 {
                     byte[] myReadBuffer = new byte[1024];
                     byte[] myWriteBuffer = new byte[1024];
@@ -106,9 +109,9 @@ namespace LegoSnifferBLE
                     {
                         stream.Read(myReadBuffer, 0, myReadBuffer.Length);
                         mystr += Encoding.Default.GetString(Decode(myReadBuffer));
-                        if (mystr.StartsWith("val:"))
+                        if (mystr.StartsWith("payload:"))
                         {
-                            payload = mystr.Replace("val:", "");
+                            payload = mystr.Replace("payload:", "").Split(';');
                         }
                     } while (stream.DataAvailable);
                 }

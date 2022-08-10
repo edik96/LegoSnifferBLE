@@ -17,9 +17,10 @@ namespace VisualizerLegoSnifferBLE
     {
         private int m_ID;
         private DateTime m_date;
-        private int m_cm = 1;
+        private double m_cm = 0;
+        private string m_sensorcolor = "white";
         public ChartValues<DateTimePoint> m_values;
-        private int current_value = 0;
+        private int curr_cm_val = 0;
         private int prev_value = 0;
         private Func<double, string> m_formatter;
         public Func<double, string> Formatter
@@ -46,12 +47,18 @@ namespace VisualizerLegoSnifferBLE
             {
                 while (true)
                 {
-                    current_value = Convert.ToInt32(reader.ReadLine());
-                    if (current_value != prev_value)
+                    string line = reader.ReadLine();
+                    if(line.Length > 1)
                     {
-                        prev_value = current_value;
-                        Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(current_value)));
-                 
+                        curr_cm_val = Convert.ToInt32(line.Split(';')[0]);
+                        if (curr_cm_val != prev_value)
+                        {
+                            prev_value = curr_cm_val;
+                            Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
+                            Cm = curr_cm_val;
+                        }
+                        SensorColor = reader.ReadLine().Split(';')[1];
+
                     }
                 }
             });
@@ -107,7 +114,7 @@ namespace VisualizerLegoSnifferBLE
                 OnPropertyChanged("Date");
             }
         }
-        public int Cm
+        public double Cm
         {
             get
             {
@@ -117,6 +124,18 @@ namespace VisualizerLegoSnifferBLE
             {
                 m_cm = value;
                 OnPropertyChanged("Cm");
+            }
+        }
+        public string SensorColor
+        {
+            get
+            {
+                return m_sensorcolor;
+            }
+            set
+            {
+                m_sensorcolor = value;
+                OnPropertyChanged("SensorColor");
             }
         }
     }

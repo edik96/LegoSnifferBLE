@@ -41,4 +41,20 @@ namespace VisualizerLegoSnifferBLE
             InitializeComponent();
         }
     }
+    public class CmToPercentConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            double maxval = 200;
+            double j = (double)value;
+            return (100 / maxval) * j;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            int maxval = 200;
+            int j = (int)value;
+            return 50;
+        }
+    }
 }

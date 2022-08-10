@@ -1,7 +1,7 @@
-﻿<Application x:Class="VisualizerBrainDamage.App"
+﻿<Application x:Class="VisualizerLegoSnifferBLE.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:VisualizerBrainDamage"
+             xmlns:local="clr-namespace:VisualizerLegoSnifferBLE"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
          
