@@ -14,3 +14,7 @@ Simple C# Solution to sniff incoming BLE packets from Robot Inventor 51515
 4. Add Windows reference to LegSnifferBLE.proj
   - References, Add Reference, Browse, "C:\Program Files (x86)\Windows Kits\10\UnionMetadata\10.0.22621.0(version can vary)", All Files (.*), Windows.winmd, Add
 5. Profit?
+
+## Information
+# LegoSnifferBLE Project Args[2]
+{mac_address:string ex.:FF:FF:FF:FF:FF:FF} {use_namedpipes:bool ex.:1}
