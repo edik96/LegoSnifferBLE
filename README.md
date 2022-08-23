@@ -16,5 +16,5 @@ Simple C# Solution to sniff incoming BLE packets from Robot Inventor 51515
 5. Profit?
 
 ## Information
-### LegoSnifferBLE Project Args[2]
-{mac_address:string ex.:FF:FF:FF:FF:FF:FF} {use_namedpipes:bool ex.:1}
+### LegoSnifferBLE Project Args[3]
+{mac_address:string ex.:FF:FF:FF:FF:FF:FF} {use_namedpipes:bool ex.:1} {use_db:bool ex.:1} 
