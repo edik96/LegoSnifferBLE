@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+        xmlns:h="http://helix-toolkit.org/wpf"
         xmlns:local="clr-namespace:VisualizerLegoSnifferBLE" d:DataContext="{d:DesignInstance Type=local:MainViewModel}"
         mc:Ignorable="d"
         Title="VisualizerLegoSnifferBLE" Height="450" Width="800">
@@ -21,14 +22,121 @@
         <Border Visibility="{Binding Danger, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource VisibleIfTrueConverter}}" Background="#FFFF3D3D" Grid.Row="0">
             <Label  Content="DANGER" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold"/>
         </Border>
-        <lvc:CartesianChart LegendLocation="Top" Grid.Row="1">
-            <lvc:CartesianChart.Series>
-                <lvc:StepLineSeries Values="{Binding Values, UpdateSourceTrigger=PropertyChanged}" Fill="#19031CFF" Stroke="#FF0034FF" Foreground="#FF000FFF" />
-            </lvc:CartesianChart.Series>
-            <lvc:CartesianChart.AxisX>
-                <lvc:Axis LabelFormatter="{Binding Formatter}"></lvc:Axis>
-            </lvc:CartesianChart.AxisX>
-        </lvc:CartesianChart>
+        <DockPanel Grid.Row="1">
+            <h:HelixViewport3D ShowViewCube="False" Width="{Binding ActualWidth, ElementName=img}">
+                <h:DefaultLights/>
+                <h:Teapot>
+                    <h:Teapot.Transform>
+                        <Transform3DGroup>
+                            <RotateTransform3D >
+                                <RotateTransform3D.Rotation>
+                                    <AxisAngleRotation3D Axis="0,0,1" Angle="{Binding Yaw, UpdateSourceTrigger=PropertyChanged}" />
+                                </RotateTransform3D.Rotation>
+                            </RotateTransform3D>
+                            <RotateTransform3D >
+                                <RotateTransform3D.Rotation>
+                                    <AxisAngleRotation3D Axis="1,0,0" Angle="{Binding Roll, UpdateSourceTrigger=PropertyChanged}" />
+                                </RotateTransform3D.Rotation>
+                            </RotateTransform3D>
+                            <RotateTransform3D >
+                                <RotateTransform3D.Rotation>
+                                    <AxisAngleRotation3D Axis="0,-1,0" Angle="{Binding Pitch, UpdateSourceTrigger=PropertyChanged}" />
+                                </RotateTransform3D.Rotation>
+                            </RotateTransform3D>
+                            <!--<TranslateTransform3D OffsetZ="{Binding RelativeOffsetZ, ElementName=UserControl}" 
+                        OffsetX="{Binding RelativeOffsetX, ElementName=UserControl}" 
+                        OffsetY="{Binding RelativeOffsetY, ElementName=UserControl}" />-->
+                        </Transform3DGroup>
+                    </h:Teapot.Transform>
+                </h:Teapot>
+                <h:HelixViewport3D.Camera>
+                    <PerspectiveCamera 
+                        Position="0, 0, 10"
+                     /> 
+                    
+                </h:HelixViewport3D.Camera>
+     
+
+            </h:HelixViewport3D>
+            <Viewport3D Width="200" Visibility="Collapsed">
+                <Viewport3D.Camera>
+                    <PerspectiveCamera Position="0, 0, 3" LookDirection="0, 0,-4" FieldOfView="60" />
+                </Viewport3D.Camera>
+                <Viewport3D.Children>
+
+                    <!-- This ModelVisual3D defines the light cast in the scene. Without light, the 3D 
+                 object cannot be seen. Also, the direction of the lights affect shadowing. If desired,
+                 you can create multiple lights with different colors that shine from different directions. -->
+                    <ModelVisual3D>
+                        <ModelVisual3D.Content>
+                            <DirectionalLight Color="#FFFFFF" Direction="-0.612372,-0.5,-0.612372" />
+                        </ModelVisual3D.Content>
+                    </ModelVisual3D>
+                    <ModelVisual3D>
+                        
+                        <ModelVisual3D.Content>
+                            <GeometryModel3D>
+
+                                <!-- The geometry specifies the shape of the 3D plane. In this sample, a flat sheet is created. -->
+                                <GeometryModel3D.Geometry>
+                                    <MeshGeometry3D x:Name="meshMain"
+                                Positions="0 0 0  1 0 0  0 1 0  1 1 0  0 0 1  1 0 1  0 1 1  1 1 1"
+                                TriangleIndices="2 3 1  2 1 0  7 1 3  7 5 1  6 5 7  6 4 5  6 2 0  2 0 4  2 7 3  2 6 7  0 1 5  0 5 4">
+                                    </MeshGeometry3D>
+                                </GeometryModel3D.Geometry>
+                                <GeometryModel3D.Material>
+                                    <MaterialGroup>
+                                        <DiffuseMaterial>
+                                            <DiffuseMaterial.Brush>
+                                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                                    <LinearGradientBrush.GradientStops>
+                                                        <GradientStop Color="Yellow" Offset="0" />
+                                                        <GradientStop Color="Red" Offset="0.25" />
+                                                        <GradientStop Color="Blue" Offset="0.75" />
+                                                        <GradientStop Color="LimeGreen" Offset="1" />
+                                                    </LinearGradientBrush.GradientStops>
+                                                </LinearGradientBrush>
+                                            </DiffuseMaterial.Brush>
+                                        </DiffuseMaterial>
+                                    </MaterialGroup>
+                                </GeometryModel3D.Material>
+                                <GeometryModel3D.Transform>
+                                    <Transform3DGroup>
+                                        <RotateTransform3D CenterX="0.5" CenterY="0.5" CenterZ="0.5">
+                                            <RotateTransform3D.Rotation>
+                                                <AxisAngleRotation3D Axis="0,0,-1" Angle="{Binding Roll, UpdateSourceTrigger=PropertyChanged}" />
+                                            </RotateTransform3D.Rotation>
+                                        </RotateTransform3D>
+                                        <RotateTransform3D CenterX="0.5" CenterY="0.5" CenterZ="0.5">
+                                            <RotateTransform3D.Rotation>
+                                                <AxisAngleRotation3D Axis="1,0,0" Angle="{Binding Yaw, UpdateSourceTrigger=PropertyChanged}" />
+                                            </RotateTransform3D.Rotation>
+                                        </RotateTransform3D>
+                                        <RotateTransform3D CenterX="0.5" CenterY="0.5" CenterZ="0.5">
+                                            <RotateTransform3D.Rotation>
+                                                <AxisAngleRotation3D Axis="0,-1,0" Angle="{Binding Pitch, UpdateSourceTrigger=PropertyChanged}" />
+                                            </RotateTransform3D.Rotation>
+                                        </RotateTransform3D>
+                                        <!--<TranslateTransform3D OffsetZ="{Binding RelativeOffsetZ, ElementName=UserControl}" 
+                        OffsetX="{Binding RelativeOffsetX, ElementName=UserControl}" 
+                        OffsetY="{Binding RelativeOffsetY, ElementName=UserControl}" />-->
+                                    </Transform3DGroup>
+                                </GeometryModel3D.Transform>
+                            </GeometryModel3D>
+                        </ModelVisual3D.Content>
+                    </ModelVisual3D>
+                </Viewport3D.Children>
+            </Viewport3D>
+            <lvc:CartesianChart LegendLocation="Top" HorizontalAlignment="Stretch" >
+                <lvc:CartesianChart.Series>
+                    <lvc:StepLineSeries Values="{Binding Values, UpdateSourceTrigger=PropertyChanged}" Fill="#19031CFF" Stroke="#FF0034FF" Foreground="#FF000FFF" />
+                </lvc:CartesianChart.Series>
+                <lvc:CartesianChart.AxisX>
+                    <lvc:Axis LabelFormatter="{Binding Formatter}"></lvc:Axis>
+                </lvc:CartesianChart.AxisX>
+            </lvc:CartesianChart>
+        </DockPanel>
+       
         <Label Content="{Binding Cm, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" VerticalAlignment="Top">
         </Label>
         <StackPanel Grid.Row="2" Orientation="Horizontal">
@@ -43,9 +151,13 @@
                 <ColumnDefinition Width="Auto"></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <Border CornerRadius="15" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="0,0,0,0" Background="{Binding SensorColor, UpdateSourceTrigger=PropertyChanged}" BorderThickness="1,1,1,1" Padding="25,25,25,25" BorderBrush="#FFC5C5C5">
+            <Border CornerRadius="15" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="0,0,0,0" BorderThickness="1,1,1,1" Padding="25,25,25,25" BorderBrush="#FFC5C5C5">
+                <Border.Background>
+                    <SolidColorBrush Color="{Binding SensorColor, UpdateSourceTrigger=PropertyChanged}">
+                    </SolidColorBrush>
+                </Border.Background>
             </Border>
-            <Image Source="/51515.png" VerticalAlignment="Stretch" ></Image>
+            <Image x:Name="img" Source="/51515.png" VerticalAlignment="Stretch" ></Image>
             <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
                 <ProgressBar  Foreground="#FF3F82B5" VerticalAlignment="Center" Value="{Binding Cm, Converter={StaticResource cmtopercent}, UpdateSourceTrigger=PropertyChanged}" Height="10" BorderBrush="{x:Null}" Background="{x:Null}"></ProgressBar>
                 <StackPanel Orientation="Horizontal">

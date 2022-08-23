@@ -18,43 +18,26 @@ using LiveCharts.Configurations;
 using System.IO.Pipes;
 using System.IO;
 using System.Media;
+using Newtonsoft.Json;
 
 namespace LegoSnifferBLE
 {
-    public class Beep
+    public static class Beep
     {
-        public static void BeepBeep(int Amplitude, int Frequency, int Duration)
+        public static bool TryParseJson<T>(this string @this, out T result)
         {
-            double A = ((Amplitude * (System.Math.Pow(2, 15))) / 1000) - 1;
-            double DeltaFT = 2 * Math.PI * Frequency / 44100.0;
-
-            int Samples = 441 * Duration / 10;
-            int Bytes = Samples * 4;
-            int[] Hdr = { 0X46464952, 36 + Bytes, 0X45564157, 0X20746D66, 16, 0X20001, 44100, 176400, 0X100004, 0X61746164, Bytes };
-            using (MemoryStream MS = new MemoryStream(44 + Bytes))
+            bool success = true;
+            var settings = new JsonSerializerSettings
             {
-                using (BinaryWriter BW = new BinaryWriter(MS))
-                {
-                    for (int I = 0; I < Hdr.Length; I++)
-                    {
-                        BW.Write(Hdr[I]);
-                    }
-                    for (int T = 0; T < Samples; T++)
-                    {
-                        short Sample = System.Convert.ToInt16(A * Math.Sin(DeltaFT * T));
-                        BW.Write(Sample);
-                        BW.Write(Sample);
-                    }
-                    BW.Flush();
-                    MS.Seek(0, SeekOrigin.Begin);
-                    using (SoundPlayer SP = new SoundPlayer(MS))
-                    {
-                        SP.PlaySync();
-                    }
-                }
-            }
+                Error = (sender, args) => { success = false; args.ErrorContext.Handled = true; },
+                MissingMemberHandling = MissingMemberHandling.Error
+            };
+            result = JsonConvert.DeserializeObject<T>(@this, settings);
+            return success;
         }
+      
     }
+
     public class Program
     {
         public static DeviceInformationCollection collection;
@@ -63,13 +46,18 @@ namespace LegoSnifferBLE
         private static BluetoothClient BC;
         private static NetworkStream stream = null;
         private static string con_str = "Host=10.10.242.82;Username=postgres;Password=secret;Database=postgres";
-        private static string[] payload = new string[2];
+        private static string payload = string.Empty;
         public static string p_value = string.Empty;
         public static string mac_addres = "a8:e2:c1:9c:71:4a"; //Default
         private static StreamWriter writer;
         private static int usePipes = 0;
         private static int useDB = 1;
         private static NpgsqlConnection connection = null;
+
+
+        public static int[] p_gyro = new int[3];
+        public static int p_dinstance = 0;
+        public static int[] p_color = new int[3];
         static void Main(string[] args)
         {
             Console.Title = "Lego Sniffer BLE";
@@ -94,32 +82,25 @@ namespace LegoSnifferBLE
             //string sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES ("+payload+")";
             string sql_q = string.Empty;
             EnumerateSnapshot();
-            int distance = 0;
             while (true)
             {
-                if (payload.Length > 0)
-                {
-                    int.TryParse(payload[0], out distance);
-                    if (payload[1] == "None" || payload[1] == string.Empty)
-                        payload[1] = "white";
-                    Console.WriteLine("{" + DateTime.Now + ", " + distance + ", " + payload[1] + "}");
+              
                     if (usePipes == 1)
                     {
-                        writer.WriteLine(distance + ";" + payload[1]);
+                        writer.WriteLine(payload);
                         writer.Flush();
                     }
                     if (useDB == 1)
                     {
-                        sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + distance + ")";
+                    //Needs Rework with payload json ;)
+                     /*   sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + distance + ")";
 
                         var cmd = new NpgsqlCommand(sql_q, connection);
-                        cmd.ExecuteScalar();
+                        cmd.ExecuteScalar();*/
                     }
-                }
-                Console.Title = Convert.ToString(distance);
+                //Console.Title = Convert.ToString(distance);
                 //Console.Beep((37 + distance) * 140, 100);
-                Beep.BeepBeep(1000, distance * 100, 5);
-                // System.Threading.Thread.Sleep(50);
+                System.Threading.Thread.Sleep(50);
             }
         }
         static NpgsqlConnection InitDB(string _con_str)
@@ -128,6 +109,7 @@ namespace LegoSnifferBLE
             con.Open();
             return con;
         }
+       
         static async void EnumerateSnapshot()
         {
             collection = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
@@ -152,11 +134,33 @@ namespace LegoSnifferBLE
                     string mystr = "";
                     do
                     {
+                     
                         stream.Read(myReadBuffer, 0, myReadBuffer.Length);
-                        mystr += Encoding.Default.GetString(Decode(myReadBuffer));
-                        if (mystr.StartsWith("payload:"))
+                        mystr = Encoding.Default.GetString(Decode(myReadBuffer));
+                        var reader = new StringReader(mystr);
+                        if (mystr.StartsWith("{\"m\":0") && !mystr.Contains("MicroPython"))
                         {
-                            payload = mystr.Replace("payload:", "").Split(';');
+                            Console.Clear();
+                            dynamic stuff = JsonConvert.DeserializeObject(reader.ReadLine());
+                            //Gyro
+                            p_gyro[0] = stuff["p"][8][0];
+                            p_gyro[1] = stuff["p"][8][1];
+                            p_gyro[2] = stuff["p"][8][2];
+                            //Acceleration Module = stuff["p"][7]
+                            //Color Sensor 0 - 1000 RGB stuff["p"][4]
+                            //Range Finder stuff["p"][3] cm
+                            int.TryParse(stuff["p"][3][1][0].ToString(), out p_dinstance);
+                            //Console.WriteLine(stuff["p"][4]);
+                            p_color[0] = Convert.ToInt32((255m / 1000m) * Convert.ToInt32(stuff["p"][4][1][2]));
+                            p_color[1] = Convert.ToInt32((255m / 1000m) * Convert.ToInt32(stuff["p"][4][1][3]));
+                            p_color[2] = Convert.ToInt32((255m / 1000m) * Convert.ToInt32(stuff["p"][4][1][4]));
+
+
+                            DataSet j = new DataSet(p_gyro, p_color, p_dinstance);
+
+                            payload = JsonConvert.SerializeObject(j);
+
+                            //payload = mystr.Replace("payload:", "").Split(';');
                         }
                     } while (stream.DataAvailable);
                 }

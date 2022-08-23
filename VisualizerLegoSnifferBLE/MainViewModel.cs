@@ -1,5 +1,6 @@
 ﻿using LiveCharts;
 using LiveCharts.Defaults;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,6 +10,9 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
+using System.Windows.Threading;
 
 namespace VisualizerLegoSnifferBLE
 {
@@ -17,14 +21,66 @@ namespace VisualizerLegoSnifferBLE
         private int m_ID;
         private DateTime m_date;
         private double m_cm = 0;
-        private string m_sensorcolor = "white";
+        private Color m_sensorcolor = Colors.White;
         public ChartValues<DateTimePoint> m_values;
         private int curr_cm_val = 0;
         private int prev_value = 0;
         private Func<double, string> m_formatter;
         private DateTime m_startdate, m_enddate;
         private bool m_danger = false;
+        private int m_pitch = 0;
+        private int m_yaw = 0;
+        private int m_roll = 0;
+        private Vector3D m_rotation;
 
+        public Vector3D Rotation
+        {
+            get
+            {
+                return m_rotation;
+            }
+            set
+            {
+                m_rotation = value;
+                OnPropertyChanged("Rotation");
+            }
+        }
+        public int Pitch
+        {
+            get
+            {
+                return m_pitch;
+            }
+            set
+            {
+                m_pitch = value;
+                OnPropertyChanged("Pitch");
+            }
+        }
+        public int Yaw
+        {
+            get
+            {
+                return m_yaw;
+            }
+            set
+            {
+                m_yaw = value;
+                OnPropertyChanged("Yaw");
+            }
+        }
+        public int Roll
+        {
+            get
+            {
+                return m_roll;
+            }
+            set
+            {
+                m_roll = value;
+                OnPropertyChanged("Roll");
+            }
+        }
         public bool Danger
         {
             get
@@ -89,20 +145,25 @@ namespace VisualizerLegoSnifferBLE
                     string line = reader.ReadLine();
                     try
                     {
-                        if (line.Length > 1 && !line.Contains("None"))
+                        dynamic stuff = JsonConvert.DeserializeObject(line);
+                        curr_cm_val = stuff["m_distance"];
+                        if (curr_cm_val != prev_value)
                         {
-                            curr_cm_val = Convert.ToInt32(line.Split(';')[0]);
-                            if (curr_cm_val != prev_value)
-                            {
-                                prev_value = curr_cm_val;
-                                Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
-                                Cm = curr_cm_val;
-                            }
-                            SensorColor = reader.ReadLine().Split(';')[1];
-
+                            prev_value = curr_cm_val;
+                            Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
+                            Cm = curr_cm_val;
                         }
+                        Dispatcher.CurrentDispatcher.Invoke(() => 
+                            SensorColor = Color.FromRgb((byte)stuff["m_rgb"][0], (byte)stuff["m_rgb"][1], (byte)stuff["m_rgb"][2]));
+
+                        Pitch = stuff["m_gyro"][0];
+                        Yaw = stuff["m_gyro"][1];
+                        Roll = stuff["m_gyro"][2];
+
+
+                        Rotation = new Vector3D(stuff["m_gyro"][0], stuff["m_gyro"][1], stuff["m_gyro"][2]);
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         Console.Write("Bad message => Proceeding to next message");
                     }
@@ -176,7 +237,7 @@ namespace VisualizerLegoSnifferBLE
                 OnPropertyChanged("Cm");
             }
         }
-        public string SensorColor
+        public Color SensorColor
         {
             get
             {
