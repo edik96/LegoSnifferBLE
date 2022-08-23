@@ -9,15 +9,21 @@
         Title="VisualizerLegoSnifferBLE" Height="450" Width="800">
     <Window.Resources>
         <local:CmToPercentConverter x:Key="cmtopercent"></local:CmToPercentConverter>
+        <BooleanToVisibilityConverter x:Key="VisibleIfTrueConverter" />
     </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
-        <lvc:CartesianChart>
+        <Border Visibility="{Binding Danger, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource VisibleIfTrueConverter}}" Background="#FFFF3D3D" Grid.Row="0">
+            <Label  Content="DANGER" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold"/>
+        </Border>
+        <lvc:CartesianChart LegendLocation="Top" Grid.Row="1">
             <lvc:CartesianChart.Series>
-                <lvc:LineSeries Values="{Binding Values, UpdateSourceTrigger=PropertyChanged}" Fill="#19031CFF" Stroke="#FF0034FF" Foreground="#FF000FFF" LineSmoothness="101" />
+                <lvc:StepLineSeries Values="{Binding Values, UpdateSourceTrigger=PropertyChanged}" Fill="#19031CFF" Stroke="#FF0034FF" Foreground="#FF000FFF" />
             </lvc:CartesianChart.Series>
             <lvc:CartesianChart.AxisX>
                 <lvc:Axis LabelFormatter="{Binding Formatter}"></lvc:Axis>
@@ -25,19 +31,21 @@
         </lvc:CartesianChart>
         <Label Content="{Binding Cm, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" VerticalAlignment="Top">
         </Label>
-        <Grid Grid.Row="1" HorizontalAlignment="Stretch">
+        <StackPanel Grid.Row="2" Orientation="Horizontal">
+            <Label>Start Zeitraum:</Label>
+            <DatePicker SelectedDate="{Binding Startdate, UpdateSourceTrigger=PropertyChanged}"></DatePicker>
+            <Separator Margin="20,0,20,0"></Separator>
+            <Label>Ende:</Label>
+            <DatePicker SelectedDate="{Binding Enddate, UpdateSourceTrigger=PropertyChanged}"></DatePicker>
+        </StackPanel>
+        <Grid Grid.Row="3" HorizontalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <Border CornerRadius="999" BorderThickness="2" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="25,25,25,25" BorderBrush="#FF353535" Background="{Binding SensorColor, UpdateSourceTrigger=PropertyChanged}">
- 
+            <Border CornerRadius="15" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="0,0,0,0" Background="{Binding SensorColor, UpdateSourceTrigger=PropertyChanged}" BorderThickness="1,1,1,1" Padding="25,25,25,25" BorderBrush="#FFC5C5C5">
             </Border>
-            <Image Source="/51515.png" VerticalAlignment="Stretch" >
-                <Image.Effect>
-                    <DropShadowEffect BlurRadius="0" ShadowDepth="0" Color="{Binding SensorColor, UpdateSourceTrigger=PropertyChanged}" />
-                </Image.Effect>
-            </Image>
+            <Image Source="/51515.png" VerticalAlignment="Stretch" ></Image>
             <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
                 <ProgressBar  Foreground="#FF3F82B5" VerticalAlignment="Center" Value="{Binding Cm, Converter={StaticResource cmtopercent}, UpdateSourceTrigger=PropertyChanged}" Height="10" BorderBrush="{x:Null}" Background="{x:Null}"></ProgressBar>
                 <StackPanel Orientation="Horizontal">

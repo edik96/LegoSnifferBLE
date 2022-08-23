@@ -10,7 +10,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 namespace VisualizerLegoSnifferBLE
 {
     public class MainViewModel : INotifyPropertyChanged
@@ -23,6 +22,46 @@ namespace VisualizerLegoSnifferBLE
         private int curr_cm_val = 0;
         private int prev_value = 0;
         private Func<double, string> m_formatter;
+        private DateTime m_startdate, m_enddate;
+        private bool m_danger = false;
+
+        public bool Danger
+        {
+            get
+            {
+                return m_danger;
+            }
+            set
+            {
+                m_danger = value;
+                OnPropertyChanged("Danger");
+            }
+        }
+
+        public DateTime Startdate
+        {
+            get
+            {
+                return m_startdate;
+            }
+            set
+            {
+                m_startdate = value;
+                OnPropertyChanged("Startdate");
+            }
+        }
+        public DateTime Enddate
+        {
+            get
+            {
+                return m_enddate;
+            }
+            set
+            {
+                m_enddate = value;
+                OnPropertyChanged("Enddate");
+            }
+        }
         public Func<double, string> Formatter
         {
             get
@@ -48,17 +87,24 @@ namespace VisualizerLegoSnifferBLE
                 while (true)
                 {
                     string line = reader.ReadLine();
-                    if(line.Length > 1)
+                    try
                     {
-                        curr_cm_val = Convert.ToInt32(line.Split(';')[0]);
-                        if (curr_cm_val != prev_value)
+                        if (line.Length > 1 && !line.Contains("None"))
                         {
-                            prev_value = curr_cm_val;
-                            Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
-                            Cm = curr_cm_val;
-                        }
-                        SensorColor = reader.ReadLine().Split(';')[1];
+                            curr_cm_val = Convert.ToInt32(line.Split(';')[0]);
+                            if (curr_cm_val != prev_value)
+                            {
+                                prev_value = curr_cm_val;
+                                Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
+                                Cm = curr_cm_val;
+                            }
+                            SensorColor = reader.ReadLine().Split(';')[1];
 
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        Console.Write("Bad message => Proceeding to next message");
                     }
                 }
             });
@@ -123,6 +169,10 @@ namespace VisualizerLegoSnifferBLE
             set
             {
                 m_cm = value;
+                if (value < 7)
+                    Danger = true;
+                else
+                    Danger = false;
                 OnPropertyChanged("Cm");
             }
         }

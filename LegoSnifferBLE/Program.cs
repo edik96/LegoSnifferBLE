@@ -17,9 +17,44 @@ using LiveCharts;
 using LiveCharts.Configurations;
 using System.IO.Pipes;
 using System.IO;
+using System.Media;
 
 namespace LegoSnifferBLE
 {
+    public class Beep
+    {
+        public static void BeepBeep(int Amplitude, int Frequency, int Duration)
+        {
+            double A = ((Amplitude * (System.Math.Pow(2, 15))) / 1000) - 1;
+            double DeltaFT = 2 * Math.PI * Frequency / 44100.0;
+
+            int Samples = 441 * Duration / 10;
+            int Bytes = Samples * 4;
+            int[] Hdr = { 0X46464952, 36 + Bytes, 0X45564157, 0X20746D66, 16, 0X20001, 44100, 176400, 0X100004, 0X61746164, Bytes };
+            using (MemoryStream MS = new MemoryStream(44 + Bytes))
+            {
+                using (BinaryWriter BW = new BinaryWriter(MS))
+                {
+                    for (int I = 0; I < Hdr.Length; I++)
+                    {
+                        BW.Write(Hdr[I]);
+                    }
+                    for (int T = 0; T < Samples; T++)
+                    {
+                        short Sample = System.Convert.ToInt16(A * Math.Sin(DeltaFT * T));
+                        BW.Write(Sample);
+                        BW.Write(Sample);
+                    }
+                    BW.Flush();
+                    MS.Seek(0, SeekOrigin.Begin);
+                    using (SoundPlayer SP = new SoundPlayer(MS))
+                    {
+                        SP.PlaySync();
+                    }
+                }
+            }
+        }
+    }
     public class Program
     {
         public static DeviceInformationCollection collection;
@@ -33,25 +68,29 @@ namespace LegoSnifferBLE
         public static string mac_addres = "a8:e2:c1:9c:71:4a"; //Default
         private static StreamWriter writer;
         private static int usePipes = 0;
+        private static int useDB = 1;
+        private static NpgsqlConnection connection = null;
         static void Main(string[] args)
         {
             Console.Title = "Lego Sniffer BLE";
             if (args.Length > 0)
             {
                 mac_addres = args[0];
-                if(args.Length > 1)
-                   usePipes = Convert.ToInt32(args[1]);
+                if (args.Length > 1)
+                    usePipes = Convert.ToInt32(args[1]);
+                if (args.Length > 2)
+                    useDB = Convert.ToInt32(args[2]);
             }
             var server = new NamedPipeServerStream(mac_addres);
-            
-            if(usePipes == 1)
+
+            if (usePipes == 1)
             {
                 server.WaitForConnection();
                 writer = new StreamWriter(server);
             }
-          
 
-            NpgsqlConnection connection = InitDB(con_str);
+            if (useDB == 1)
+                connection = InitDB(con_str);
             //string sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES ("+payload+")";
             string sql_q = string.Empty;
             EnumerateSnapshot();
@@ -69,12 +108,18 @@ namespace LegoSnifferBLE
                         writer.WriteLine(distance + ";" + payload[1]);
                         writer.Flush();
                     }
-                    sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + distance + ")";
-                    var cmd = new NpgsqlCommand(sql_q, connection);
-                    cmd.ExecuteScalar();
+                    if (useDB == 1)
+                    {
+                        sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + distance + ")";
+
+                        var cmd = new NpgsqlCommand(sql_q, connection);
+                        cmd.ExecuteScalar();
+                    }
                 }
-              
-                System.Threading.Thread.Sleep(500);
+                Console.Title = Convert.ToString(distance);
+                //Console.Beep((37 + distance) * 140, 100);
+                Beep.BeepBeep(1000, distance * 100, 5);
+                // System.Threading.Thread.Sleep(50);
             }
         }
         static NpgsqlConnection InitDB(string _con_str)
@@ -99,7 +144,7 @@ namespace LegoSnifferBLE
         {
             stream = BC.GetStream();
             if (result.IsCompleted)
-            {               
+            {
                 while (stream != null && stream.CanRead)
                 {
                     byte[] myReadBuffer = new byte[1024];
@@ -117,7 +162,7 @@ namespace LegoSnifferBLE
                 }
             }
         }
-        
+
         public static byte[] Decode(byte[] packet)
         {
             var i = packet.Length - 1;
@@ -131,3 +176,4 @@ namespace LegoSnifferBLE
         }
     }
 }
+
