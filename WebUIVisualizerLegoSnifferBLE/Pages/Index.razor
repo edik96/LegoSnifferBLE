@@ -1,0 +1,304 @@
+﻿@page "/"
+@using LiveChartsCore
+@using LiveChartsCore.Defaults
+@using MQTTnet
+@using MQTTnet.Client
+@using MQTTnet.Extensions.ManagedClient
+@using MQTTnet.Packets
+@using Newtonsoft.Json
+@using System.Text
+@inject HttpClient Http
+
+
+<PageTitle>Index</PageTitle>
+
+<h1>LEGO MEIN STORM KUMBL</h1>
+<SurveyPrompt Title="How is Blazor working for you?" />
+
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+        
+                <tr>
+                    <td>@Cm</td>
+                    <td>@Pitch</td>
+                    <td>@Roll</td>
+                    <td>@Yaw</td>
+                </tr>
+           
+        </tbody>
+    </table>
+
+
+@code {
+    private int m_ID;
+    private DateTime m_date;
+    private double m_cm = 0;
+    private string m_sensorcolor = "#FFFFFF";
+    // public ChartValues<DateTimePoint> m_values;
+    private int curr_cm_val = 0;
+    private int prev_value = 0;
+    private Func<double, string> m_formatter;
+    private double m_startdate, m_enddate;
+    private bool m_danger = false;
+    private int m_pitch = 0;
+    private int m_yaw = 0;
+    private int m_roll = 0;
+    // private Vector3D m_rotation;
+
+    protected ManagedMqttClient managerModel;
+    public MqttFactory mqttFactory;
+
+    protected override void OnInitialized()
+    {
+        Init();
+    }
+    /* public Vector3D Rotation
+    {
+    get
+    {
+    return m_rotation;
+    }
+    set
+    {
+    }
+    }*/
+    public int Pitch
+    {
+        get
+        {
+            return m_pitch;
+        }
+        set
+        {
+            m_pitch = value;
+        }
+    }
+    public int Yaw
+    {
+        get
+        {
+            return m_yaw;
+        }
+        set
+        {
+            m_yaw = value;
+        }
+    }
+    public int Roll
+    {
+        get
+        {
+            return m_roll;
+        }
+        set
+        {
+            m_roll = value;
+        }
+    }
+    public bool Danger
+    {
+        get
+        {
+            return m_danger;
+        }
+        set
+        {
+            m_danger = value;
+        }
+    }
+
+    public double Startdate
+    {
+        get
+        {
+            return m_startdate;
+        }
+        set
+        {
+            m_startdate = value;
+        }
+    }
+    public double Enddate
+    {
+        get
+        {
+            return m_enddate;
+        }
+        set
+        {
+            m_enddate = value;
+        }
+    }
+    public Func<double, string> Formatter
+    {
+        get
+        {
+            return m_formatter;
+        }
+        set
+        {
+            m_formatter = value;
+        }
+    }
+    public async void ClientConnect(IManagedMqttClient _mqttClient, ManagedMqttClientOptions options)
+    { 
+        await _mqttClient.StartAsync(options) ;
+        var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder()
+            .WithTopicFilter(f => { f.WithTopic("LegoWave"); })
+            .Build();
+        List<MqttTopicFilter> topics = new List<MqttTopicFilter>();
+        topics.Add(new MqttTopicFilterBuilder().WithTopic("LegoWave").Build());
+        await _mqttClient.SubscribeAsync(topics);
+        
+        }
+
+        public void Init()
+        {
+            mqttFactory = new MqttFactory();
+            //var client = new NamedPipeClientStream("a8:e2:c1:9c:71:4a");
+            MqttClientOptionsBuilder builder = new MqttClientOptionsBuilder()
+                                    .WithClientId("webkumbl")
+                                    .WithTcpServer("localhost", 1883);
+            ManagedMqttClientOptions options = new ManagedMqttClientOptionsBuilder()
+                         .WithAutoReconnectDelay(TimeSpan.FromSeconds(60))
+                         .WithClientOptions(builder.Build())
+                         .Build();
+
+            var mqttClient = mqttFactory.CreateManagedMqttClient();
+
+            //managerModel = new ManagedMqttClient(mqttClient, null);
+            //ClientConnect(mqttClient);
+            
+            //StreamReader reader = new StreamReader(client);
+            mqttClient.ApplicationMessageReceivedAsync += e =>
+            {
+                Console.WriteLine("Received application message." +  Encoding.Default.GetString(e.ApplicationMessage.Payload));
+                
+
+                return Task.CompletedTask;
+            };
+
+            ClientConnect(mqttClient,  options);
+        }
+         private void MqttClient_MessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
+            {
+                StringBuilder str = new StringBuilder();
+                str.AppendLine("MQTT MessageReceived!");
+                str.AppendLine($"Content Type : {e.ApplicationMessage.ContentType}");
+                str.AppendLine($"Payload : {Encoding.UTF8.GetString(e.ApplicationMessage.Payload)}");
+                Console.WriteLine(str.ToString());
+            }
+        //    Formatter = value => DateTime.Now.ToString("t");
+        //    Task.Factory.StartNew(() =>
+        //    {
+        //        while (true)
+        //        {
+        //            //string? line = reader.ReadLine();
+        //            try
+        //            {
+        //                DataSet stuff = JsonConvert.DeserializeObject(line);
+        //                curr_cm_val = stuff["m_distance"];
+        //            // if (curr_cm_val != prev_value)
+        //            //{
+        //            //  prev_value = curr_cm_val;
+        //            /*Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
+        //                if(curr_cm_val > 4)
+        //                    Cm = curr_cm_val;
+        //                if (Values.Count() >= 100)
+        //                    Values.RemoveAt(0);
+        //                    */
+        //            // }
+        //            //Dispatcher.CurrentDispatcher.Invoke(() => 
+        //            //SensorColor = "#" + (byte)stuff["m_rgb"][0], (byte)stuff["m_rgb"][1], (byte)stuff["m_rgb"][2]);
+        //            //);
+
+        //                Pitch = stuff["m_gyro"][0];
+        //                Yaw = stuff["m_gyro"][1];
+        //                Roll = stuff["m_gyro"][2];
+
+        //                Startdate = DateTime.Now.AddSeconds(-5).Ticks;
+        //                Console.WriteLine(stuff);
+        //              //  Rotation = new Vector3D(stuff["m_gyro"][0], stuff["m_gyro"][1], stuff["m_gyro"][2]);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Console.Write("Bad message => Proceeding to next message");
+        //            }
+        //        }
+        //    });
+        //}
+
+        /*public ChartValues<DateTimePoint> Values
+        {
+            get
+            {
+                return m_values;
+            }
+            set
+            {
+                m_values = value;
+            }
+        }*/
+
+
+       // public SeriesCollection LastHourSeries { get; set; }
+
+        public int ID
+        {
+            get
+            {
+                return m_ID;
+            }
+            set
+            {
+                m_ID = value;
+            }
+        }
+        public DateTime Date
+        {
+            get
+            {
+                return m_date;
+            }
+            set
+            {
+                m_date = value;
+            }
+        }
+        public double Cm
+        {
+            get
+            {
+                return m_cm;
+            }
+            set
+            {
+                m_cm = value;
+                if (value < 7)
+                    Danger = true;
+                else
+                    Danger = false;
+            }
+        }
+        public string SensorColor
+        {
+            get
+            {
+                return m_sensorcolor;
+            }
+            set
+            {
+                m_sensorcolor = value;
+            }
+        }
+   }
+

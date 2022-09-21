@@ -1,5 +1,6 @@
 ﻿using LiveCharts;
 using LiveCharts.Defaults;
+using MQTTnet;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,11 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using MQTTnet.Client;
+using MQTTnet;
+using MQTTnet.Extensions.ManagedClient;
+using System.Threading;
+using MQTTnet.Packets;
 
 namespace VisualizerLegoSnifferBLE
 {
@@ -26,12 +32,14 @@ namespace VisualizerLegoSnifferBLE
         private int curr_cm_val = 0;
         private int prev_value = 0;
         private Func<double, string> m_formatter;
-        private DateTime m_startdate, m_enddate;
+        private double m_startdate, m_enddate;
         private bool m_danger = false;
         private int m_pitch = 0;
         private int m_yaw = 0;
         private int m_roll = 0;
         private Vector3D m_rotation;
+        private MqttFactory mqttFactory;
+        private IMqttClient mqttClient;
 
         public Vector3D Rotation
         {
@@ -94,7 +102,7 @@ namespace VisualizerLegoSnifferBLE
             }
         }
 
-        public DateTime Startdate
+        public double Startdate
         {
             get
             {
@@ -106,7 +114,7 @@ namespace VisualizerLegoSnifferBLE
                 OnPropertyChanged("Startdate");
             }
         }
-        public DateTime Enddate
+        public double Enddate
         {
             get
             {
@@ -130,6 +138,81 @@ namespace VisualizerLegoSnifferBLE
                 OnPropertyChanged("Formatter");
             }
         }
+        public void InitNew()
+        {
+            mqttFactory = new MqttFactory();
+            //var client = new NamedPipeClientStream("a8:e2:c1:9c:71:4a");
+            MqttClientOptions options = new MqttClientOptionsBuilder()
+                                    .WithClientId("webkumbl")
+                                    .WithTcpServer("localhost", 1883).Build();
+
+            mqttClient = mqttFactory.CreateMqttClient();
+            
+            //managerModel = new ManagedMqttClient(mqttClient, null);
+            //ClientConnect(mqttClient);
+
+            //StreamReader reader = new StreamReader(client);
+            mqttClient.ApplicationMessageReceivedAsync += e =>
+            {
+                if(e.ApplicationMessage.Payload != null)
+                {
+                    DataSet stuff = JsonConvert.DeserializeObject<DataSet>(Encoding.UTF8.GetString(e.ApplicationMessage.Payload));
+                    if (stuff != null)
+                    {
+                        try
+                        {
+
+                            curr_cm_val = stuff.m_distance;
+                            // if (curr_cm_val != prev_value)
+                            //{
+                            //  prev_value = curr_cm_val;
+                            if (Values.Count == 0 || Values.Last().DateTime.AddSeconds(0.5).Ticks < DateTime.Now.Ticks)
+                                Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
+                            if (curr_cm_val > 4)
+                                Cm = curr_cm_val;
+                            if (Values.Count >= 100)
+                                Values.RemoveAt(0);
+
+                            // }
+                            Dispatcher.CurrentDispatcher.Invoke(() =>
+                                SensorColor = Color.FromRgb((byte)stuff.m_rgb[0], (byte)stuff.m_rgb[1], (byte)stuff.m_rgb[2]));
+
+                            //Pitch = stuff.m_gyro[0];
+                            //Yaw = stuff.m_gyro[1];
+                            //Roll = stuff.m_gyro[2];
+
+                            ChangeRotaion(stuff.m_gyro[0], stuff.m_gyro[1], stuff.m_gyro[2]);
+
+                            Startdate = DateTime.Now.AddSeconds(-5).Ticks;
+
+                            // Rotation = new Vector3D(stuff.m_gyro[0], stuff.m_gyro[1], stuff.m_gyro[2]);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Write("Bad message => Proceeding to next message");
+                        }
+
+                    }
+                }
+                    
+                return Task.CompletedTask;
+            };
+            ClientConnectAsync(mqttClient, options);
+
+        }
+
+
+        private async void ClientConnectAsync(IMqttClient mqttClient, MqttClientOptions options)
+        {
+            Console.WriteLine("Connecting...");
+            await mqttClient.ConnectAsync(options, CancellationToken.None);
+
+            var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder()
+                .WithTopicFilter(f => { f.WithTopic("LegoWave"); })
+                .Build();
+
+            await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+        }
 
         public void Init()
         {
@@ -143,32 +226,73 @@ namespace VisualizerLegoSnifferBLE
                 while (true)
                 {
                     string line = reader.ReadLine();
-                    try
+                    DataSet stuff = JsonConvert.DeserializeObject<DataSet>(line);
+                    if (stuff != null)
                     {
-                        dynamic stuff = JsonConvert.DeserializeObject(line);
-                        curr_cm_val = stuff["m_distance"];
-                        if (curr_cm_val != prev_value)
+                        try
                         {
-                            prev_value = curr_cm_val;
-                            Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
-                            Cm = curr_cm_val;
+
+                            curr_cm_val = stuff.m_distance;
+                            // if (curr_cm_val != prev_value)
+                            //{
+                            //  prev_value = curr_cm_val;
+                                if (Values.Count == 0 || Values.Last().DateTime.AddSeconds(0.5).Ticks < DateTime.Now.Ticks)
+                                  Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
+                                if(curr_cm_val > 4)
+                                    Cm = curr_cm_val;
+                                if (Values.Count >= 100)
+                                    Values.RemoveAt(0);
+
+                            // }
+                            Dispatcher.CurrentDispatcher.Invoke(() =>
+                                SensorColor = Color.FromRgb((byte)stuff.m_rgb[0], (byte)stuff.m_rgb[1], (byte)stuff.m_rgb[2]));
+
+                            //Pitch = stuff.m_gyro[0];
+                            //Yaw = stuff.m_gyro[1];
+                            //Roll = stuff.m_gyro[2];
+
+                            ChangeRotaion(stuff.m_gyro[0], stuff.m_gyro[1], stuff.m_gyro[2]);
+
+                            Startdate = DateTime.Now.AddSeconds(-5).Ticks;
+
+                           // Rotation = new Vector3D(stuff.m_gyro[0], stuff.m_gyro[1], stuff.m_gyro[2]);
                         }
-                        Dispatcher.CurrentDispatcher.Invoke(() => 
-                            SensorColor = Color.FromRgb((byte)stuff["m_rgb"][0], (byte)stuff["m_rgb"][1], (byte)stuff["m_rgb"][2]));
+                        catch (Exception ex)
+                        {
+                            Console.Write("Bad message => Proceeding to next message");
+                        }
 
-                        Pitch = stuff["m_gyro"][0];
-                        Yaw = stuff["m_gyro"][1];
-                        Roll = stuff["m_gyro"][2];
-
-
-                        Rotation = new Vector3D(stuff["m_gyro"][0], stuff["m_gyro"][1], stuff["m_gyro"][2]);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Write("Bad message => Proceeding to next message");
                     }
                 }
             });
+        }
+        public void ChangeRotaion(int _p, int _y, int _r)
+        {
+            int pm = 1;
+            int ym = 1;
+            int rm = 1;
+
+            if (_p < Pitch)
+                pm = -1;
+            if (_y < Yaw)
+                ym = -1;
+            if (_r < Roll)
+                rm = -1;
+
+            while(Pitch != _p || Yaw != _y || Roll != _r)
+            {
+                if(Pitch != _p)
+                    Pitch += pm;
+
+                if (Yaw != _y)
+                    Yaw += ym;
+
+                if (Roll != _r)
+                    Roll += rm;
+            }
+            Pitch = _p;
+            Yaw = _y;
+            Roll = _r;
         }
 
         public ChartValues<DateTimePoint> Values

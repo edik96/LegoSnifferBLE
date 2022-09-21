@@ -10,6 +10,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VisualizerLegoSnifferBLE", 
 		{4F513A37-3227-4FE9-A9D1-1D8B07C13542} = {4F513A37-3227-4FE9-A9D1-1D8B07C13542}
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebUIVisualizerLegoSnifferBLE", "WebUIVisualizerLegoSnifferBLE\WebUIVisualizerLegoSnifferBLE.csproj", "{1C3AE579-77FC-4E72-9F6B-2E2EB83870F8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebUIVisualizerLEGO", "WebUIVisualizerLEGO\WebUIVisualizerLEGO.csproj", "{C1A09D72-FE13-49B1-B93D-17F2AD4AAC4C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +28,14 @@ Global
 		{677460D5-F68E-4E39-963F-DBD319F5C648}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{677460D5-F68E-4E39-963F-DBD319F5C648}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{677460D5-F68E-4E39-963F-DBD319F5C648}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C3AE579-77FC-4E72-9F6B-2E2EB83870F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C3AE579-77FC-4E72-9F6B-2E2EB83870F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C3AE579-77FC-4E72-9F6B-2E2EB83870F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C3AE579-77FC-4E72-9F6B-2E2EB83870F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1A09D72-FE13-49B1-B93D-17F2AD4AAC4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1A09D72-FE13-49B1-B93D-17F2AD4AAC4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1A09D72-FE13-49B1-B93D-17F2AD4AAC4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1A09D72-FE13-49B1-B93D-17F2AD4AAC4C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
