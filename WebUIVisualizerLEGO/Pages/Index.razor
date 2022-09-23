@@ -1,0 +1,435 @@
+﻿@page "/"
+@using Blazor3D.Events
+@using Blazor3D.Viewers
+@using MQTTnet
+@using MQTTnet.Client
+@using MQTTnet.Client.Options
+@using MQTTnet.Client.Receiving
+@using MQTTnet.Client.Subscribing
+@using MQTTnet.Extensions.ManagedClient
+@using Newtonsoft.Json
+@using System.Text
+@using System.Diagnostics
+@using Plotly.Blazor.LayoutLib
+@using Plotly.Blazor.Traces.ScatterLib
+<PageTitle>Index</PageTitle>
+
+<h1>LEGO Mindstorm 515151</h1>
+Realtime dashboard over MQTT
+
+<ul >
+<li>@m_cm</li>
+<li>@m_sensorcolor</li>
+<li>@m_pitch&deg;</li>
+<li>@m_yaw&deg;</li>
+<li>@m_roll&deg;</li>
+</ul >
+<div class="row justify-content-center">
+    <div class="col-6 v3d">
+        <Viewer @ref="View3D1" ViewerSettings=@settings Scene=scene />
+    </div>
+</div>
+
+<PlotlyChart style="height: 60vh; min-height: 350px" @bind-Config="config" @bind-Layout="layout" @bind-Data="data" @ref="chart"/>
+
+@code {
+    private int m_ID;
+    private DateTime m_date;
+    protected double m_cm = 0;
+    protected string m_sensorcolor = "#FFFFFF";
+    //public ChartValues<DateTimePoint> m_values;
+    private int curr_cm_val = 0;
+    private int prev_value = 0;
+    private Func<double, string> m_formatter;
+    private double m_startdate, m_enddate;
+    private bool m_danger = false;
+    protected int m_pitch = 0;
+    protected int m_yaw = 0;
+    protected int m_roll = 0;
+    private MqttFactory? mqttFactory;
+    //private Vector3D m_rotation;
+
+    private IList<object>? distances;
+    private IList<object>? dates;
+
+    protected PlotlyChart? chart;
+    protected Config? config;
+    protected Layout? layout;
+    protected IList<ITrace> data;
+
+    private Viewer View3D1 = null!;
+    private Guid objGuid;
+    private ViewerSettings settings = new ViewerSettings()
+    {
+            ContainerId = "example1",
+    };
+    private Blazor3D.Scenes.Scene scene = new Blazor3D.Scenes.Scene();
+
+    //public Vector3D Rotation
+    //{
+    //    get
+    //    {
+    //        return m_rotation;
+    //    }
+    //    set
+    //    {
+    //        m_rotation = value;
+    //    }
+    //}
+    public int Pitch
+    {
+        get
+        {
+            return m_pitch;
+        }
+        set
+        {
+            m_pitch = value;
+        }
+    }
+    public int Yaw
+    {
+        get
+        {
+            return m_yaw;
+        }
+        set
+        {
+            m_yaw = value;
+        }
+    }
+    public int Roll
+    {
+        get
+        {
+            return m_roll;
+        }
+        set
+        {
+            m_roll = value;
+        }
+    }
+    public bool Danger
+    {
+        get
+        {
+            return m_danger;
+        }
+        set
+        {
+            m_danger = value;
+        }
+    }
+
+    public double Startdate
+    {
+        get
+        {
+            return m_startdate;
+        }
+        set
+        {
+            m_startdate = value;
+        }
+    }
+    public double Enddate
+    {
+        get
+        {
+            return m_enddate;
+        }
+        set
+        {
+            m_enddate = value;
+        }
+    }
+    public Func<double, string> Formatter
+    {
+        get
+        {
+            return m_formatter;
+        }
+        set
+        {
+            m_formatter = value;
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        InitNew();
+        scene.Add(new AmbientLight());
+        scene.Add(new PointLight()
+            {
+                Position = new Vector3
+                {
+                    X = 1,
+                    Y = 3,
+                    Z = 0
+                }
+            });
+
+    }
+    private Task<Guid> test;
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+            var settings = new ImportSettings
+                {
+                    Format = Import3DFormats.Obj,
+                    FileURL = "/legomdl/LEGOmodell.obj",
+                    TextureURL = "/legomdl/LEGO.jpg"
+                };
+            test = this.View3D1.Import3DModelAsync(settings);
+
+        return base.OnAfterRenderAsync(firstRender);
+
+    }
+
+
+    public void InitNew()
+    {
+        config = new Config();
+        layout = new Layout();
+        // Using of the interface IList is important for the event callback!
+        distances = new List<object>();
+        dates = new List<object>();
+        data = new List<ITrace>
+        {
+            new Scatter
+            {
+                Name = "Distance",
+                Mode = Plotly.Blazor.Traces.ScatterLib.ModeFlag.Lines | Plotly.Blazor.Traces.ScatterLib.ModeFlag.Markers,
+                X = dates,
+                Y = distances
+            }
+        };
+        config.AutoSizable = true;
+        layout.ShowLegend = true;
+        layout.Title = new Title()
+        {
+            Text = "Distance"
+        };
+
+
+        layout.Transition = new Transition();
+        layout.Transition.Easing = Plotly.Blazor.LayoutLib.TransitionLib.EasingEnum.Bounce;
+        layout.Transition.Duration = 500;
+        mqttFactory = new MqttFactory();
+
+        MqttClientOptionsBuilder builder = new MqttClientOptionsBuilder()
+                                .WithClientId("webkumbl")
+                                .WithTcpServer("localhost", 1883);
+        ManagedMqttClientOptions options = new ManagedMqttClientOptionsBuilder()
+                     .WithAutoReconnectDelay(TimeSpan.FromSeconds(60))
+                     .WithClientOptions(builder.Build())
+                     .Build();
+
+        var mqttClient = mqttFactory.CreateManagedMqttClient();
+
+        var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder()
+            .WithTopicFilter(f => { f.WithTopic("LegoWave"); })
+            .Build();
+
+        SubscribeConnect(mqttClient, options);
+        //managerModel = new ManagedMqttClient(mqttClient, null);
+        //ClientConnect(mqttClient);
+
+        //StreamReader reader = new StreamReader(client);
+        mqttClient.ApplicationMessageReceivedHandler = new MqttApplicationMessageReceivedHandlerDelegate(MsgRecievedHandler);
+
+
+        //ClientConnect(mqttClient, options);
+    }
+    private async void SubscribeConnect(IManagedMqttClient _mqttClient, IManagedMqttClientOptions mqttSubscribeOptions)
+    {
+
+        string[] strTopics = { "LegoWave" };
+
+        MqttClientSubscribeOptions objSubOptions = new MqttClientSubscribeOptions();
+        List<MqttTopicFilter> objTopics = new List<MqttTopicFilter>();
+
+        foreach (string strTopic in strTopics)
+        {
+            MqttTopicFilter objAdd = new MqttTopicFilter();
+            objAdd.Topic = strTopic;
+            objTopics.Add(objAdd);
+        }
+
+        _mqttClient.StartAsync(mqttSubscribeOptions).GetAwaiter().GetResult();
+        await _mqttClient.SubscribeAsync(objTopics);
+    }
+
+
+
+    private void MsgRecievedHandler(MqttApplicationMessageReceivedEventArgs e)
+    {
+        if(e.ApplicationMessage.Payload != null)
+        {
+            Debug.WriteLine(Encoding.UTF8.GetString(e.ApplicationMessage.Payload));
+            DataSet stuff = JsonConvert.DeserializeObject<DataSet>(Encoding.UTF8.GetString(e.ApplicationMessage.Payload));
+            if (stuff != null)
+            {
+                try
+                {
+
+                    Cm = stuff.m_distance;
+                    Pitch = stuff.m_gyro[0];
+                    Yaw = stuff.m_gyro[1];
+                    Roll = stuff.m_gyro[2];
+                    SensorColor = System.Drawing.Color.FromArgb(stuff.m_rgb[0], stuff.m_rgb[1], stuff.m_rgb[2]).ToString();
+                    
+
+                    
+
+                    //
+                    //scene.Children[1].Rotation.Y = Yaw;
+                    //scene.Children[1].Rotation.Z = Roll;
+                    //dates.Add(DateTime.Now);
+                    //distances.Add(stuff.m_distance);
+
+                    //if (Values.Count == 0 || Values.Last().DateTime.AddSeconds(0.5).Ticks < DateTime.Now.Ticks)
+                    //  Values.Add(new DateTimePoint(DateTime.Now, Convert.ToDouble(curr_cm_val)));
+                    //if(curr_cm_val > 4)
+                    //    Cm = curr_cm_val;
+
+
+                    this.InvokeAsync(() => this.StateHasChanged());
+                    this.InvokeAsync(() => this.chart.ExtendTrace(DateTime.Now, stuff.m_distance, data.Count - 1));
+                    if((this.chart.Data.First() as Scatter).Y.Count >= 100){
+                        this.InvokeAsync(() => (this.chart.Data.First() as Scatter).X.RemoveAt(0));
+                        this.InvokeAsync(() => (this.chart.Data.First() as Scatter).Y.RemoveAt(0));
+                        //this.InvokeAsync(() => (this.chart.Data.First() as Scatter).
+                    }
+                    //if (this.chart.Data[0]. >= 100)
+                       //Values.RemoveAt(0);
+                    //Dispatcher.CurrentDispatcher.Invoke(() =>
+                  //  SensorColor = Color.FromRgb((byte)stuff.m_rgb[0], (byte)stuff.m_rgb[1], (byte)stuff.m_rgb[2]);//);
+
+                            //Pitch = stuff.m_gyro[0];
+                            //Yaw = stuff.m_gyro[1];
+                            //Roll = stuff.m_gyro[2];
+
+                            ChangeRotaion(stuff.m_gyro[0], stuff.m_gyro[1], stuff.m_gyro[2]);
+
+                            Startdate = DateTime.Now.AddSeconds(-5).Ticks;
+
+                           // Rotation = new Vector3D(stuff.m_gyro[0], stuff.m_gyro[1], stuff.m_gyro[2]);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Write("Bad message => Proceeding to next message");
+                        }
+
+                    }
+        }
+    }
+
+        public void Init()
+        {
+            /*var client = new NamedPipeClientStream(LegoSnifferBLE.Program.mac_addres);
+            client.Connect();
+            StreamReader reader = new StreamReader(client);*/
+
+            Formatter = value => DateTime.Now.ToString("t");
+            Task.Factory.StartNew(() =>
+            {
+                while (true)
+                {
+                    //string line = reader.ReadLine();
+                    
+                }
+            });
+        }
+        public void ChangeRotaion(int _p, int _y, int _r)
+        {
+            int pm = 1;
+            int ym = 1;
+            int rm = 1;
+
+            if (_p < Pitch)
+                pm = -1;
+            if (_y < Yaw)
+                ym = -1;
+            if (_r < Roll)
+                rm = -1;
+
+            while(Pitch != _p || Yaw != _y || Roll != _r)
+            {
+                if(Pitch != _p)
+                    Pitch += pm;
+
+                if (Yaw != _y)
+                    Yaw += ym;
+
+                if (Roll != _r)
+                    Roll += rm;
+            }
+            Pitch = _p;
+            Yaw = _y;
+            Roll = _r;
+        }
+
+        //public ChartValues<DateTimePoint> Values
+        //{
+        //    get
+        //    {
+        //        return m_values;
+        //    }
+        //    set
+        //    {
+        //        m_values = value;
+        //    }
+        //}
+
+
+
+        //public SeriesCollection LastHourSeries { get; set; }
+
+        public int ID
+        {
+            get
+            {
+                return m_ID;
+            }
+            set
+            {
+                m_ID = value;
+            }
+        }
+        public DateTime Date
+        {
+            get
+            {
+                return m_date;
+            }
+            set
+            {
+                m_date = value;
+            }
+        }
+        public double Cm
+        {
+            get
+            {
+                return m_cm;
+            }
+            set
+            {
+                m_cm = value;
+                if (value < 7)
+                    Danger = true;
+                else
+                    Danger = false;
+            }
+        }
+        public string SensorColor
+        {
+            get
+            {
+                return m_sensorcolor;
+            }
+            set
+            {
+                m_sensorcolor = value;
+            }
+        }
+}

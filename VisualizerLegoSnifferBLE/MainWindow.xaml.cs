@@ -37,7 +37,7 @@ namespace VisualizerLegoSnifferBLE
             //save the mapper globally         
             Charting.For<DateTimePoint>(mapper);
             this.DataContext = VM;
-            VM.Init();
+            VM.InitNew();
             InitializeComponent();
         }
     }

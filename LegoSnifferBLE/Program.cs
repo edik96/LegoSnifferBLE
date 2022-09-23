@@ -19,6 +19,10 @@ using System.IO.Pipes;
 using System.IO;
 using System.Media;
 using Newtonsoft.Json;
+using MQTTnet.Client;
+using MQTTnet.Server;
+using MQTTnet;
+using System.Threading;
 
 namespace LegoSnifferBLE
 {
@@ -35,7 +39,7 @@ namespace LegoSnifferBLE
             result = JsonConvert.DeserializeObject<T>(@this, settings);
             return success;
         }
-      
+
     }
 
     public class Program
@@ -54,6 +58,9 @@ namespace LegoSnifferBLE
         private static int useDB = 1;
         private static NpgsqlConnection connection = null;
 
+        private static MqttServer mqttServer = null;
+        private static IMqttClient mqttClient = null;
+        private static MqttFactory mqttFactory = new MqttFactory();
 
         public static int[] p_gyro = new int[3];
         public static int p_dinstance = 0;
@@ -73,8 +80,13 @@ namespace LegoSnifferBLE
 
             if (usePipes == 1)
             {
-                server.WaitForConnection();
-                writer = new StreamWriter(server);
+                //server.WaitForConnection();
+                //writer = new StreamWriter(server);
+
+                //MQTT Server
+                InitMQTTServer();
+             
+
             }
 
             if (useDB == 1)
@@ -84,32 +96,64 @@ namespace LegoSnifferBLE
             EnumerateSnapshot();
             while (true)
             {
-              
-                    if (usePipes == 1)
-                    {
-                        writer.WriteLine(payload);
-                        writer.Flush();
-                    }
-                    if (useDB == 1)
-                    {
-                    //Needs Rework with payload json ;)
-                     /*   sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + distance + ")";
+                if (usePipes == 1)
+                {
+                    //writer.WriteLine(payload);
+                    //writer.Flush();
 
-                        var cmd = new NpgsqlCommand(sql_q, connection);
-                        cmd.ExecuteScalar();*/
-                    }
+                    //MQTT PUBLISH
+                    if(mqttClient.IsConnected)
+                        BustPayload(payload);
+
+                }
+                if (useDB == 1)
+                {
+                    //Needs Rework with payload json ;)
+                    /*   sql_q = "INSERT INTO postgres.discover.process_lego (data) VALUES (" + distance + ")";
+
+                       var cmd = new NpgsqlCommand(sql_q, connection);
+                       cmd.ExecuteScalar();*/
+                }
                 //Console.Title = Convert.ToString(distance);
                 //Console.Beep((37 + distance) * 140, 100);
                 System.Threading.Thread.Sleep(50);
             }
         }
+
+        private static async void BustPayload(string _payload)
+        {
+            var message = new MqttApplicationMessageBuilder()
+                              .WithTopic("LegoWave")
+                              .WithPayload(_payload)
+                              .Build();
+
+            await mqttClient.PublishAsync(message, CancellationToken.None);
+        }
+
+        private static async void InitMQTTServer()
+        {
+            MqttServerOptions mqttServerOptions = new MqttServerOptions();
+            mqttServerOptions.TlsEndpointOptions.Port = 1883;
+            mqttServerOptions.TlsEndpointOptions.ClientCertificateRequired = false;
+            mqttServerOptions.EnablePersistentSessions = true;
+            mqttServer = mqttFactory.CreateMqttServer(mqttServerOptions);
+            await mqttServer.StartAsync();
+            mqttClient = mqttFactory.CreateMqttClient();
+
+            var options = new MqttClientOptionsBuilder()
+                .WithClientId(mac_addres)
+                .WithTcpServer("localhost", 1883)
+                .Build();
+            await mqttClient.ConnectAsync(options, CancellationToken.None) ;
+        }
+
         static NpgsqlConnection InitDB(string _con_str)
         {
             NpgsqlConnection con = new NpgsqlConnection(_con_str);
             con.Open();
             return con;
         }
-       
+
         static async void EnumerateSnapshot()
         {
             collection = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
@@ -124,6 +168,7 @@ namespace LegoSnifferBLE
         }
         private static void Connect(IAsyncResult result)
         {
+
             stream = BC.GetStream();
             if (result.IsCompleted)
             {
@@ -134,7 +179,6 @@ namespace LegoSnifferBLE
                     string mystr = "";
                     do
                     {
-                     
                         stream.Read(myReadBuffer, 0, myReadBuffer.Length);
                         mystr = Encoding.Default.GetString(Decode(myReadBuffer));
                         var reader = new StringReader(mystr);
@@ -143,22 +187,31 @@ namespace LegoSnifferBLE
                             Console.Clear();
                             dynamic stuff = JsonConvert.DeserializeObject(reader.ReadLine());
                             //Gyro
-                            p_gyro[0] = stuff["p"][8][0];
-                            p_gyro[1] = stuff["p"][8][1];
-                            p_gyro[2] = stuff["p"][8][2];
-                            //Acceleration Module = stuff["p"][7]
-                            //Color Sensor 0 - 1000 RGB stuff["p"][4]
-                            //Range Finder stuff["p"][3] cm
-                            int.TryParse(stuff["p"][3][1][0].ToString(), out p_dinstance);
-                            //Console.WriteLine(stuff["p"][4]);
-                            p_color[0] = Convert.ToInt32((255m / 1000m) * Convert.ToInt32(stuff["p"][4][1][2]));
-                            p_color[1] = Convert.ToInt32((255m / 1000m) * Convert.ToInt32(stuff["p"][4][1][3]));
-                            p_color[2] = Convert.ToInt32((255m / 1000m) * Convert.ToInt32(stuff["p"][4][1][4]));
+                            try
+                            {
+                                p_gyro[0] = stuff["p"][8][0];
+                                p_gyro[1] = stuff["p"][8][1];
+                                p_gyro[2] = stuff["p"][8][2];
+                                //Acceleration Module = stuff["p"][7]
+                                //Color Sensor 0 - 1000 RGB stuff["p"][4]
+                                //Range Finder stuff["p"][3] cm
+                                int.TryParse(stuff["p"][3][1][0].ToString(), out p_dinstance);
+                                //Console.WriteLine(stuff["p"][4]);
+                                p_color[0] = Convert.ToInt32((255m / 1000m) * Convert.ToInt32(stuff["p"][4][1][2]));
+                                p_color[1] = Convert.ToInt32((255m / 1000m) * Convert.ToInt32(stuff["p"][4][1][3]));
+                                p_color[2] = Convert.ToInt32((255m / 1000m) * Convert.ToInt32(stuff["p"][4][1][4]));
 
 
-                            DataSet j = new DataSet(p_gyro, p_color, p_dinstance);
+                                DataSet j = new DataSet(p_gyro, p_color, p_dinstance);
 
-                            payload = JsonConvert.SerializeObject(j);
+                                payload = JsonConvert.SerializeObject(j);
+                            }
+                            catch (Exception ex)
+                            {
+
+                            }
+
+
 
                             //payload = mystr.Replace("payload:", "").Split(';');
                         }
@@ -169,7 +222,7 @@ namespace LegoSnifferBLE
 
         public static byte[] Decode(byte[] packet)
         {
-            var i = packet.Length - 1;
+            uint i = (uint)(packet.Length - 1);
             while (packet[i] == 0)
             {
                 --i;

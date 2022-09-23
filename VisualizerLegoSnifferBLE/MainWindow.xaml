@@ -11,6 +11,7 @@
     <Window.Resources>
         <local:CmToPercentConverter x:Key="cmtopercent"></local:CmToPercentConverter>
         <BooleanToVisibilityConverter x:Key="VisibleIfTrueConverter" />
+          
     </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -23,19 +24,27 @@
             <Label  Content="DANGER" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold"/>
         </Border>
         <DockPanel Grid.Row="1">
-            <h:HelixViewport3D ShowViewCube="False" Width="{Binding ActualWidth, ElementName=img}">
-                <h:DefaultLights/>
-                <h:Teapot>
-                    <h:Teapot.Transform>
+            <h:HelixViewport3D ShowFrameRate="True" ShowViewCube="False" Width="{Binding ActualWidth, ElementName=img}">
+                <h:DefaultLights>
+                    <h:DefaultLights.Transform>
+                        <Transform3DGroup>
+                            <TranslateTransform3D OffsetX="10" OffsetY="10">
+                                
+                            </TranslateTransform3D>
+                        </Transform3DGroup>
+                    </h:DefaultLights.Transform>
+                </h:DefaultLights>
+                <h:FileModelVisual3D Source="C:\Users\487c\source\repos\LegoSnifferBLE\VisualizerLegoSnifferBLE\LEGOmodell.obj">
+                    <h:FileModelVisual3D.Transform>
                         <Transform3DGroup>
                             <RotateTransform3D >
                                 <RotateTransform3D.Rotation>
-                                    <AxisAngleRotation3D Axis="0,0,1" Angle="{Binding Yaw, UpdateSourceTrigger=PropertyChanged}" />
+                                    <AxisAngleRotation3D Axis="0,0,1" Angle="{Binding Roll, UpdateSourceTrigger=PropertyChanged}" />
                                 </RotateTransform3D.Rotation>
                             </RotateTransform3D>
                             <RotateTransform3D >
                                 <RotateTransform3D.Rotation>
-                                    <AxisAngleRotation3D Axis="1,0,0" Angle="{Binding Roll, UpdateSourceTrigger=PropertyChanged}" />
+                                    <AxisAngleRotation3D Axis="-1,0,0" Angle="{Binding Yaw, UpdateSourceTrigger=PropertyChanged}" />
                                 </RotateTransform3D.Rotation>
                             </RotateTransform3D>
                             <RotateTransform3D >
@@ -47,8 +56,8 @@
                         OffsetX="{Binding RelativeOffsetX, ElementName=UserControl}" 
                         OffsetY="{Binding RelativeOffsetY, ElementName=UserControl}" />-->
                         </Transform3DGroup>
-                    </h:Teapot.Transform>
-                </h:Teapot>
+                    </h:FileModelVisual3D.Transform>
+                </h:FileModelVisual3D>
                 <h:HelixViewport3D.Camera>
                     <PerspectiveCamera 
                         Position="0, 0, 10"
@@ -127,24 +136,25 @@
                     </ModelVisual3D>
                 </Viewport3D.Children>
             </Viewport3D>
-            <lvc:CartesianChart LegendLocation="Top" HorizontalAlignment="Stretch" >
-                <lvc:CartesianChart.Series>
-                    <lvc:StepLineSeries Values="{Binding Values, UpdateSourceTrigger=PropertyChanged}" Fill="#19031CFF" Stroke="#FF0034FF" Foreground="#FF000FFF" />
+            <lvc:CartesianChart HorizontalAlignment="Stretch" ScrollMode="X" >
+                <lvc:CartesianChart.Series >
+                    <lvc:StepLineSeries Values="{Binding Values, UpdateSourceTrigger=PropertyChanged}" Fill="#19031CFF" Foreground="{x:Null}" />
                 </lvc:CartesianChart.Series>
+                <lvc:CartesianChart.AxisY>
+                    <lvc:Axis MaxValue="200" MinValue="0"></lvc:Axis>                    
+                </lvc:CartesianChart.AxisY>
                 <lvc:CartesianChart.AxisX>
-                    <lvc:Axis LabelFormatter="{Binding Formatter}"></lvc:Axis>
+                    <lvc:Axis MinValue="{Binding Startdate, UpdateSourceTrigger=PropertyChanged}" LabelFormatter="{Binding Formatter, UpdateSourceTrigger=PropertyChanged}"></lvc:Axis>
                 </lvc:CartesianChart.AxisX>
             </lvc:CartesianChart>
         </DockPanel>
        
         <Label Content="{Binding Cm, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" VerticalAlignment="Top">
         </Label>
-        <StackPanel Grid.Row="2" Orientation="Horizontal">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Visibility="Hidden">
             <Label>Start Zeitraum:</Label>
-            <DatePicker SelectedDate="{Binding Startdate, UpdateSourceTrigger=PropertyChanged}"></DatePicker>
             <Separator Margin="20,0,20,0"></Separator>
             <Label>Ende:</Label>
-            <DatePicker SelectedDate="{Binding Enddate, UpdateSourceTrigger=PropertyChanged}"></DatePicker>
         </StackPanel>
         <Grid Grid.Row="3" HorizontalAlignment="Stretch">
             <Grid.ColumnDefinitions>
