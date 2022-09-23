@@ -169,16 +169,17 @@ Realtime dashboard over MQTT
             });
 
     }
-
+    private Task<Guid> test;
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        var settings = new ImportSettings
-        {
-            Format = Import3DFormats.Obj,
-            FileURL = "/legomdl/LEGOmodell.obj",
-            TextureURL = "/legomdl/LEGO.jpg"
-        };
-        this.View3D1.Import3DModelAsync(settings);
+            var settings = new ImportSettings
+                {
+                    Format = Import3DFormats.Obj,
+                    FileURL = "/legomdl/LEGOmodell.obj",
+                    TextureURL = "/legomdl/LEGO.jpg"
+                };
+            test = this.View3D1.Import3DModelAsync(settings);
+
         return base.OnAfterRenderAsync(firstRender);
 
     }
@@ -275,7 +276,13 @@ Realtime dashboard over MQTT
                     Yaw = stuff.m_gyro[1];
                     Roll = stuff.m_gyro[2];
                     SensorColor = System.Drawing.Color.FromArgb(stuff.m_rgb[0], stuff.m_rgb[1], stuff.m_rgb[2]).ToString();
+                    
 
+                    
+
+                    //
+                    //scene.Children[1].Rotation.Y = Yaw;
+                    //scene.Children[1].Rotation.Z = Roll;
                     //dates.Add(DateTime.Now);
                     //distances.Add(stuff.m_distance);
 

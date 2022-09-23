@@ -222,7 +222,7 @@ namespace LegoSnifferBLE
 
         public static byte[] Decode(byte[] packet)
         {
-            var i = packet.Length - 1;
+            uint i = (uint)(packet.Length - 1);
             while (packet[i] == 0)
             {
                 --i;
