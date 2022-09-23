@@ -19,14 +19,14 @@ Realtime dashboard over MQTT
 
 <ul >
 <li>@m_cm</li>
-<li>@m_sensorcolor</li>
+<li style="background-color:@SensorColor">@m_sensorcolor</li>
 <li>@m_pitch&deg;</li>
 <li>@m_yaw&deg;</li>
 <li>@m_roll&deg;</li>
 </ul >
 <div class="row justify-content-center">
     <div class="col-6 v3d">
-        <Viewer @ref="View3D1" ViewerSettings=@settings Scene=scene />
+       @* <Viewer @ref="View3D1" ViewerSettings=@settings Scene=scene />*@
     </div>
 </div>
 
@@ -154,7 +154,7 @@ Realtime dashboard over MQTT
             m_formatter = value;
         }
     }
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         InitNew();
         scene.Add(new AmbientLight());
@@ -167,10 +167,24 @@ Realtime dashboard over MQTT
                     Z = 0
                 }
             });
+        return base.OnInitializedAsync();
 
     }
     private Task<Guid> test;
     protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // subscribe events only once
+            //View3D1.ObjectLoaded += OnObjectLoaded;
+            //View3D1.JsModuleLoaded += OnJsModuleLoaded;
+        }
+
+
+        return base.OnAfterRenderAsync(firstRender);
+
+    }
+    private async Task OnJsModuleLoaded()
     {
         var settings = new ImportSettings
                 {
@@ -179,9 +193,21 @@ Realtime dashboard over MQTT
                     TextureURL = "/legomdl/LEGO.jpg"
                 };
         test = this.View3D1.Import3DModelAsync(settings);
+    }
+    private Task OnObjectLoaded(Object3DArgs e)
+    {
+        // After object is loaded to component scene, you can locate it's C# clone in the scene.Children
+        // At the moment, only  Object3D.Uuid and Object3D.Type properties are syncronized.
+        foreach (var item in scene.Children)
+        {
+            if (item.Uuid == e.UUID)
+            {
 
-        return base.OnAfterRenderAsync(firstRender);
-
+                StateHasChanged();
+                break;
+            }
+        }
+        return Task.CompletedTask;
     }
 
 
@@ -259,7 +285,10 @@ Realtime dashboard over MQTT
     }
 
 
-
+    private static String HexConverter(System.Drawing.Color c)
+    {
+        return "#" + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2");
+    }
     private void MsgRecievedHandler(MqttApplicationMessageReceivedEventArgs e)
     {
         if(e.ApplicationMessage.Payload != null)
@@ -275,14 +304,27 @@ Realtime dashboard over MQTT
                     Pitch = stuff.m_gyro[0];
                     Yaw = stuff.m_gyro[1];
                     Roll = stuff.m_gyro[2];
-                    SensorColor = System.Drawing.Color.FromArgb(stuff.m_rgb[0], stuff.m_rgb[1], stuff.m_rgb[2]).ToString();
+                    SensorColor = HexConverter(System.Drawing.Color.FromArgb(stuff.m_rgb[0], stuff.m_rgb[1], stuff.m_rgb[2]));
 
 
+                    //if(test != null)
+                    // {
+                //    scene.BackGroundColor = SensorColor;
 
-                    var mindstorm = Viewer.GetObjectByUuid(test.Result, scene.Children);
-                    mindstorm.Rotation.X = Pitch;
-                    mindstorm.Rotation.Y = Yaw;
-                    mindstorm.Rotation.Z = Roll;
+
+                    //var mindstorm = Viewer.GetObjectByUuid(test.Result, scene.Children);
+                  //  if(scene.Children[2] != null)
+                    //{
+                        //this.View3D1.Camera.Rotation = new Euler { Order = "XYZ", X = Pitch, Y = Yaw, Z = Roll };
+                        
+                        //this.View3D1.SetParametersAsync(new ParameterView());
+                        //scene.Children[2].Rotation.X = (float)Pitch;
+                         //   scene.Children[2].Rotation.Y = (float)Yaw;
+                          //  scene.Children[2].Rotation.Z = (float)Roll;
+                            //StateHasChanged();
+                //        }
+                            
+                      //  }
 
                     //
                     //scene.Children[1].Rotation.Y = Yaw;
