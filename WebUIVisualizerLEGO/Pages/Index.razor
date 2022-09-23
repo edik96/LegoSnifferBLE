@@ -172,13 +172,13 @@ Realtime dashboard over MQTT
     private Task<Guid> test;
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
-            var settings = new ImportSettings
+        var settings = new ImportSettings
                 {
                     Format = Import3DFormats.Obj,
                     FileURL = "/legomdl/LEGOmodell.obj",
                     TextureURL = "/legomdl/LEGO.jpg"
                 };
-            test = this.View3D1.Import3DModelAsync(settings);
+        test = this.View3D1.Import3DModelAsync(settings);
 
         return base.OnAfterRenderAsync(firstRender);
 
@@ -276,9 +276,13 @@ Realtime dashboard over MQTT
                     Yaw = stuff.m_gyro[1];
                     Roll = stuff.m_gyro[2];
                     SensorColor = System.Drawing.Color.FromArgb(stuff.m_rgb[0], stuff.m_rgb[1], stuff.m_rgb[2]).ToString();
-                    
 
-                    
+
+
+                    var mindstorm = Viewer.GetObjectByUuid(test.Result, scene.Children);
+                    mindstorm.Rotation.X = Pitch;
+                    mindstorm.Rotation.Y = Yaw;
+                    mindstorm.Rotation.Z = Roll;
 
                     //
                     //scene.Children[1].Rotation.Y = Yaw;
