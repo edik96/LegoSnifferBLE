@@ -1,7 +1,7 @@
 # LegoSnifferBLE
 Simple C# Solution to sniff incoming BLE packets from Robot Inventor 51515
 
-> The repository is no longer maintained and isn't properly written. Feel free to extract code-snippets for the source.
+> The repository is no longer maintained and isn't properly written. Feel free to extract code-snippets from the source.
 
 ## Requirements
 - Dot NET Framework 4.7.2
